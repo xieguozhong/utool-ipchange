@@ -1,0 +1,13 @@
+{
+	"main": "index.html",
+	"logo": "logo.png",
+	"preload": "preload.js",
+	"platform": ["win32", "darwin"],
+	"features": [
+		{
+		  "code": "ipchange",
+		  "explain": "IP 地址快速切换工具",
+			"cmds":["ipchange","ip地址快速切换工具", "ipconfig"]
+		}
+	]
+}
