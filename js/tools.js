@@ -48,6 +48,7 @@ const iptools = {
 
     //3 MacOS 下解析手动设置网卡信息
     iptools.parseManualShell = function (networkcardInfo) {
+      //只填写了 ip 地址
       if (
         networkcardInfo.address.length > 0 &&
         networkcardInfo.subnetmask.length === 0 &&
@@ -61,19 +62,7 @@ const iptools = {
         };
       }
 
-      if (
-        networkcardInfo.address.length > 0 &&
-        networkcardInfo.subnetmask.length > 0
-      ) {
-        //全部手动设定  setmanual
-        let addressInfo =
-          networkcardInfo.address + " " + networkcardInfo.subnetmask;
-        if (networkcardInfo.router.length > 0) {
-          addressInfo += " " + networkcardInfo.router;
-        }
-        return { error: false, method: "setmanual", addressInfo: addressInfo };
-      }
-
+      //ip 和 网关都填写了但没有填写掩码
       if (
         networkcardInfo.address.length > 0 &&
         networkcardInfo.subnetmask.length === 0 &&
@@ -83,6 +72,25 @@ const iptools = {
         $("#input_Subnetmask").focus();
         return { error: true };
       }
+
+      //填写了 ip 掩码
+      if (
+        networkcardInfo.address.length > 0 &&
+        networkcardInfo.subnetmask.length > 0
+      ) {
+        //全部手动设定  setmanual
+        let addressInfo =
+          networkcardInfo.address + " " + networkcardInfo.subnetmask;
+        if (networkcardInfo.router.length > 0) {
+          addressInfo += " " + networkcardInfo.router;
+        } else {
+          addressInfo += " 0.0.0.0";
+        }
+
+        return { error: false, method: "setmanual", addressInfo: addressInfo };
+      }
+
+      
     };
 
     //4 MacOS 下点击 使用 DHCP 后的后续处理
@@ -188,6 +196,8 @@ const iptools = {
         addressInfo += " " + networkcardInfo.subnetmask;
         if (networkcardInfo.router.length > 0) {
           addressInfo += " " + networkcardInfo.router;
+        } else {
+          addressInfo += " 0.0.0.0";
         }
       }
       return { error: false, method: "setmanual", addressInfo: addressInfo };
