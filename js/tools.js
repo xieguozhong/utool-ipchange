@@ -48,6 +48,19 @@ const iptools = {
 
     //3 MacOS 下解析手动设置网卡信息
     iptools.parseManualShell = function (networkcardInfo) {
+
+      //ip 和 网关都填写了但没有填写掩码
+      if (
+        networkcardInfo.address.length > 0 &&
+        networkcardInfo.subnetmask.length === 0 &&
+        networkcardInfo.router.length > 0
+      ) {
+        alert("请输入子网掩码");
+        $("#input_Subnetmask").focus();
+        return { error: true };
+      }
+
+
       //只填写了 ip 地址
       if (
         networkcardInfo.address.length > 0 &&
@@ -62,17 +75,6 @@ const iptools = {
         };
       }
 
-      //ip 和 网关都填写了但没有填写掩码
-      if (
-        networkcardInfo.address.length > 0 &&
-        networkcardInfo.subnetmask.length === 0 &&
-        networkcardInfo.router.length > 0
-      ) {
-        alert("请输入子网掩码");
-        $("#input_Subnetmask").focus();
-        return { error: true };
-      }
-
       //填写了 ip 掩码
       if (
         networkcardInfo.address.length > 0 &&
@@ -83,14 +85,11 @@ const iptools = {
           networkcardInfo.address + " " + networkcardInfo.subnetmask;
         if (networkcardInfo.router.length > 0) {
           addressInfo += " " + networkcardInfo.router;
+          return { error: false, method: "setmanual", addressInfo: addressInfo };
         } else {
-          addressInfo += " 0.0.0.0";
-        }
-
-        return { error: false, method: "setmanual", addressInfo: addressInfo };
-      }
-
-      
+          return { error: false, method: "setmanualNorouter", addressInfo: addressInfo };
+        }        
+      }      
     };
 
     //4 MacOS 下点击 使用 DHCP 后的后续处理
@@ -156,8 +155,6 @@ const iptools = {
       for (let i = 0; i < arrayInfos.length; i++) {
         const itinfo = arrayInfos[i].trim().split(/\s{2,}/);
 
-        //console.log(itinfo);
-
         if (itinfo[0] === "DHCP enabled:") {
           if (itinfo[1] === "Yes") {
             infos[0] = "DHCP";
@@ -196,8 +193,6 @@ const iptools = {
         addressInfo += " " + networkcardInfo.subnetmask;
         if (networkcardInfo.router.length > 0) {
           addressInfo += " " + networkcardInfo.router;
-        } else {
-          addressInfo += " 0.0.0.0";
         }
       }
       return { error: false, method: "setmanual", addressInfo: addressInfo };

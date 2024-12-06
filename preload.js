@@ -44,6 +44,18 @@ window.services = {};
       } else if (shellInfo.method === "setmanualwithdhcprouter") {
         const shell = `networksetup -setmanualwithdhcprouter "${hardwarePortName}" ${shellInfo.addressInfo}`;
         return pubcomm_exec_promise(shell);
+      } else if(shellInfo.method ==='setmanualNorouter') {
+        //这一步为了清空网关项的旧值
+        const shell = `networksetup -setmanualwithdhcprouter "${hardwarePortName}" ${shellInfo.addressInfo.split(' ')[0]}`;
+        return pubcomm_exec_promise(shell).then(
+          function (res) {
+            const shell = `networksetup -setmanual "${hardwarePortName}" ${shellInfo.addressInfo}`;
+            return pubcomm_exec_promise(shell);
+          },
+          function (error) {
+            console.log("出错了：" + error);
+          }
+        );
       }
     };
   } else if (utools.isWindows()) {
