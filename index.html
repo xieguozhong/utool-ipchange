@@ -9,11 +9,12 @@
     <body>
         <div class="container">
             <div class="row" style="margin-top: 10px">
-                <div class="col-sm-3">
+                <div class="col-sm-4">
                     <table class="table table-bordered">
                         <thead>
-                            <tr>
-                                <td><b>方案列表</b></td>
+                            <tr>                                
+                                <td style="text-align: center"><b>地址</b></td>
+                                <td style="text-align: center"><b>备注</b></td>
                             </tr>
                         </thead>
                         <tbody id="tbody_plan_list"></tbody>
@@ -99,6 +100,20 @@
                                 />
                             </div>
                         </div>
+                        <div class="form-group">
+                            <label
+                                for="input_Router"
+                                class="col-sm-4 control-label"
+                                >方案备注</label
+                            >
+                            <div class="col-sm-8">
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="input_Beizu"
+                                />
+                            </div>
+                        </div>
 
                         <div class="form-group">
                             <div class="col-sm-offset-7 col-sm-5">
@@ -141,14 +156,15 @@
                     </form>
                 </div>
 
-                <div class="col-sm-4">
+                <div class="col-sm-3">
                     <div style="margin-left: 10px">
-                        <address>
+                        <address>网卡：
                             <strong><span id="span_network_name"></span></strong
                             >&nbsp;&nbsp;<img
                                 id="img_refresh"
                                 src="./img/refresh.png"
                                 alt="刷新网卡信息"
+                                title="刷新网卡信息"
                                 class="img-circle"
                                 style="
                                     width: 23px;
@@ -156,22 +172,22 @@
                                     cursor: pointer;
                                 "
                             /><br />
-                            获取方式：<span
+                            方式：<span
                                 id="span_ip_getMethod"
                                 style="border-bottom: 1px solid"
                             ></span
                             ><br />
-                            IPv4地址：<span
+                            地址：<span
                                 id="span_ip_Address"
                                 style="border-bottom: 1px solid"
                             ></span
                             ><br />
-                            子网掩码：<span
+                            掩码：<span
                                 id="span_ip_Subnetmask"
                                 style="border-bottom: 1px solid"
                             ></span
                             ><br />
-                            网关地址：<span
+                            网关：<span
                                 id="span_ip_Router"
                                 style="border-bottom: 1px solid"
                             ></span

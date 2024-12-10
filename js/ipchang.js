@@ -79,15 +79,15 @@ $(document).ready(function () {
     if (db === null) {
       utools.dbStorage.setItem("plan_list_db", {
         maxno: maxno,
-        data: [[1, result.address, result.subnetmask, result.router]],
+        data: [[1, result.address, result.subnetmask, result.router,result.beizu]],
       });
     } else {
       maxno = db.maxno + 1;
-      db.data.push([maxno, result.address, result.subnetmask, result.router]);
+      db.data.push([maxno, result.address, result.subnetmask, result.router,result.beizu]);
       utools.dbStorage.setItem("plan_list_db", { maxno: maxno, data: db.data });
     }
     const tbody = $("#tbody_plan_list");
-    const tr = `<tr id="tbody_tr_plan_${maxno}" class="table-striped" style="cursor:pointer" onclick="tablePlanTrClick(${maxno});"><td>${result.address}</td></tr>`;
+    const tr = `<tr id="tbody_tr_plan_${maxno}" class="table-striped" style="cursor:pointer" onclick="tablePlanTrClick(${maxno});"><td>${result.address}</td><td>${result.beizu}</td></tr>`;
     tbody.append(tr);
     //console.log(utools.dbStorage.getItem('plan_list_db'))
   });
@@ -113,11 +113,11 @@ $(document).ready(function () {
         db.data[i][1] = result.address;
         db.data[i][2] = result.subnetmask;
         db.data[i][3] = result.router;
-
-        const tr = `<tr id="tbody_tr_plan_${updataid}" class="table-striped" style="cursor:pointer" onclick="tablePlanTrClick(${updataid});"><td>${result.address}</td></tr>`;
+        db.data[i][4] = result.beizu;
+        //const tr = `<tr id="tbody_tr_plan_${updataid}" class="table-striped" style="cursor:pointer" onclick="tablePlanTrClick(${updataid});"><td>${result.address}</td></tr>`;
         //console.log($("#tbody_tr_plan_" + updataid + " td:first").text());
         $("#tbody_tr_plan_" + updataid + " td:first").text(result.address);
-
+        $("#tbody_tr_plan_" + updataid + " td:last").text(result.beizu);
         utools.dbStorage.setItem("plan_list_db", {
           maxno: db.maxno,
           data: db.data,
@@ -177,11 +177,13 @@ function check_address_subnetmask_router() {
     return { error: true };
   }
 
+
   return {
     error: false,
     address: address,
     subnetmask: subnetmask,
     router: router,
+    beizu:$("#input_Beizu").val().trim()
   };
 }
 
@@ -200,7 +202,8 @@ function renewLeftPlanList() {
   if (db === null) return;
   const tbody = $("#tbody_plan_list");
   for (let i = 0; i < db.data.length; i++) {
-    const tr = `<tr id="tbody_tr_plan_${db.data[i][0]}" class="table-striped" style="cursor:pointer" onclick="tablePlanTrClick(${db.data[i][0]});"><td>${db.data[i][1]}</td></tr>`;
+    const beizu = db.data[i][4] || '';
+    const tr = `<tr id="tbody_tr_plan_${db.data[i][0]}" class="table-striped" style="cursor:pointer" onclick="tablePlanTrClick(${db.data[i][0]});"><td>${db.data[i][1]}</td><td>${beizu}</td></tr>`;
     tbody.append(tr);
   }
 }
@@ -217,6 +220,7 @@ function tablePlanTrClick(planid) {
       $("#input_Address").val(db.data[i][1]);
       $("#input_Subnetmask").val(db.data[i][2]);
       $("#input_Router").val(db.data[i][3]);
+      $("#input_Beizu").val(db.data[i][4]);
       break;
     }
   }
