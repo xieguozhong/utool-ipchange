@@ -17,11 +17,12 @@ $(document).ready(function () {
 
     window.services.setNetworkToDHCP(theNetworkName).then(
       function (res) {
-        iptools.afterSetDHCPEnding();
+        const infos = ['DHCP自动','获取中...','获取中...','获取中...'];
+        updateSpan_right_info(infos)
       },
       function (error) {
         console.log("出错了：" + error);
-        alert("错误：当前网卡已经是 DHCP 模式");
+        alert("错误：当前网卡已经是 DHCP自动 模式");
       },
     );
   });
@@ -42,8 +43,12 @@ $(document).ready(function () {
 
     window.services.setNetworkToManual(theNetworkName, shellInfo).then(
       function (res) {
-        //log(res);
-        iptools.afterSetDHCPEnding();
+        let method = '手动设定';
+        if(shellInfo.method ==='setmanualwithdhcprouter') {
+          method = 'DHCP手动'
+        }
+        const infos = [method,result.address,result.subnetmask || '空',result.router || '空'];
+        updateSpan_right_info(infos);
       },
       function (error) {
         console.log("出错了：" + error);
@@ -151,8 +156,11 @@ $(document).ready(function () {
         break;
       }
     }
-    //console.log(utools.dbStorage.getItem('plan_list_db'))
+    
   });
+
+  //每隔 3 秒就更新一次右侧网卡信息
+  setInterval(select_network_chang, 3000);
 });
 
 //检测输入框的内容是否合规，有就检测，没有就不检测，但Ipv4必须要有
@@ -230,20 +238,13 @@ function tablePlanTrClick(planid) {
 function renewNetworkcardInfo(networkcardName, networkcardInfo) {
   $("#span_network_name").text(networkcardName);
   const infos = iptools.parseNetworkInfos(networkcardInfo);
-
-  //如果子网掩码不显示，就在1秒后再次获取网卡信息
-  if (infos[2] === "") {
-    $("#floatingLayer").show();
-    setTimeout(select_network_chang, 1000);
-  } else {
-    $("#floatingLayer").hide();
-  }
-
   updateSpan_right_info(infos);
 }
 
 //网卡列表改变事件
 function select_network_chang() {
+  if(iptools.task_Interval_running === true) return;
+  iptools.task_Interval_running = true;
   const theNetworkName = $("#select_network_list").val();
   if (theNetworkName === "") return;
 
@@ -254,6 +255,10 @@ function select_network_chang() {
     function (error) {
       console.log("出错了：" + error);
     },
+  ).finally(()=> {
+    iptools.task_Interval_running = false;
+  }
+
   );
 }
 

@@ -1,6 +1,6 @@
 const iptools = {
-  //特殊变量 Macos 下用于判断是否取消获取网卡信息的SetTimeout 任务
-  task_Interval_count: 0,
+  //更新网卡信息的定时任务是否正在运行，true为正在运行
+  task_Interval_running: false
 };
 
 (function () {
@@ -26,13 +26,13 @@ const iptools = {
       const cardInfos = [];
       for (let i = 0; i < res.length; i++) {
         if (res[i].indexOf("DHCP Configuration") === 0) {
-          cardInfos[0] = "DHCP";
+          cardInfos[0] = "DHCP自动";
         } else if (res[i].indexOf("Manual Configuration") === 0) {
-          cardInfos[0] = "手动";
+          cardInfos[0] = "手动设定";
         } else if (
           res[i].indexOf("Manually Using DHCP Router Configuration") === 0
         ) {
-          cardInfos[0] = "DHCP手动设定";
+          cardInfos[0] = "DHCP手动";
         } else if (res[i].indexOf("IP address") === 0) {
           cardInfos[1] = res[i].substr(res[i].indexOf(":") + 2);
         } else if (res[i].indexOf("Subnet mask") === 0) {
@@ -92,47 +92,7 @@ const iptools = {
       }      
     };
 
-    //4 MacOS 下点击 使用 DHCP 后的后续处理
-    iptools.afterSetDHCPEnding = function () {
-      iptools.task_Interval_count = 0;
-      $("#floatingLayer").show();
-      iptools.task_Interval = setInterval(
-        iptools.afterSetDHCPEndingMacOSOnly,
-        1000,
-      );
-    };
-
-    //特殊1 MacOS 下只设置静态IP地址一项时
-    iptools.afterSetDHCPEndingMacOSOnly = function () {
-      iptools.task_Interval_count += 1;
-
-      const theNetworkName = $("#select_network_list").val();
-      window.services.getNetworkInfo(theNetworkName).then(
-        function (networkcardInfo) {
-          const infos = iptools.parseNetworkInfos(networkcardInfo);
-
-          if (infos.length === 4) {
-            $("#floatingLayer").hide();
-            clearInterval(iptools.task_Interval);
-            updateSpan_right_info(infos);
-          }
-
-          if (iptools.task_Interval_count >= 10) {
-            $("#floatingLayer").hide();
-            clearInterval(iptools.task_Interval);
-
-            if (infos[0] === "DHCP手动设定" && infos.length === 2) {
-              infos[2] = "空";
-              infos[3] = "空";
-              updateSpan_right_info(infos);
-            }
-          }
-        },
-        function (error) {
-          console.log("出错了：" + error);
-        },
-      );
-    };
+    
   } else if (utools.isWindows()) {
     //1 Windows 下解析各个系统返回的获取网卡列表字符串
     iptools.parseNetworkNameList = function (result) {
@@ -157,9 +117,9 @@ const iptools = {
 
         if (itinfo[0] === "DHCP enabled:") {
           if (itinfo[1] === "Yes") {
-            infos[0] = "DHCP";
+            infos[0] = "DHCP自动";
           } else if (itinfo[1] === "No") {
-            infos[0] = "手动";
+            infos[0] = "手动设定";
           }
         } else if (itinfo[0] === "IP Address:") {
           infos[1] = itinfo[1];
@@ -198,12 +158,8 @@ const iptools = {
       return { error: false, method: "setmanual", addressInfo: addressInfo };
     };
 
-    //4 Windows 下点击 使用 DHCP 后的后续处理
-    iptools.afterSetDHCPEnding = function () {
-      setTimeout(select_network_chang, 500);
-    };
-  } else if (utools.isLinux()) {
   }
+
 })();
 
 // 正则表达式验证子网掩码

@@ -36,7 +36,7 @@ window.services = {};
       return pubcomm_exec_promise(shell);
     };
 
-    //4 Macos 下把某个网卡设置为DHCP自动获取
+    //4 Macos 下把某个网卡设置为手动
     window.services.setNetworkToManual = (hardwarePortName, shellInfo) => {
       if (shellInfo.method === "setmanual") {
         const shell = `networksetup -setmanual "${hardwarePortName}" ${shellInfo.addressInfo}`;
@@ -77,7 +77,7 @@ window.services = {};
       return pubcomm_exec_promise(shell);
     };
 
-    //4 Windows 下把某个网卡设置为DHCP自动获取
+    //4 Windows 下把某个网卡设置为手动
     window.services.setNetworkToManual = (hardwarePortName, shellInfo) => {
       const shell = `netsh interface ip set address "${hardwarePortName}" static ${shellInfo.addressInfo}`;
       return pubcomm_exec_promise(shell);
