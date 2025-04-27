@@ -1,270 +1,288 @@
-$(document).ready(function () {
-  renewLeftPlanList();
-
-  //获取网卡列表
-  getInterfaceList();
-
-  //绑定网卡列表值被改变的事件
-  $("#select_network_list").change(select_network_chang);
-
-  //网卡刷新按钮
-  $("#img_refresh").click(select_network_chang);
-
-  //使用 DHCP 点击事件
-  $("#button_use_dhcp").click(function () {
-    const theNetworkName = $("#select_network_list").val();
-    if (theNetworkName === "") return;
-
-    window.services.setNetworkToDHCP(theNetworkName).then(
-      function (res) {
-        const infos = ['DHCP自动','获取中...','获取中...','获取中...'];
-        updateSpan_right_info(infos)
-      },
-      function (error) {
-        console.log("出错了：" + error);
-        alert("错误：当前网卡已经是 DHCP自动 模式");
-      },
-    );
-  });
-
-  //应用 按钮按下事件
-  $("#button_application").click(function () {
-    const theNetworkName = $("#select_network_list").val();
-    if (theNetworkName === "") {
-      alert("请先选择要手动设置的网卡");
-      return;
-    }
-
-    const result = check_address_subnetmask_router();
-    if (result.error) return;
-
-    let shellInfo = iptools.parseManualShell(result);
-    if (shellInfo.error) return;
-
-    window.services.setNetworkToManual(theNetworkName, shellInfo).then(
-      function (res) {
-        let method = '手动设定';
-        if(shellInfo.method ==='setmanualwithdhcprouter') {
-          method = 'DHCP手动'
-        }
-        const infos = [method,result.address,result.subnetmask || '空',result.router || '空'];
-        updateSpan_right_info(infos);
-      },
-      function (error) {
-        console.log("出错了：" + error);
-      },
-    );
-  });
-
-  //获取网卡列表
-  function getInterfaceList() {
-    window.services.getNetworkNameList().then(
-      function (res) {
-        const networkNameList = iptools.parseNetworkNameList(res);
-        for (let i = 0; i < networkNameList.length; i++) {
-          $("#select_network_list").append(
-            `<option value='${networkNameList[i]}'>${networkNameList[i]}</option>`,
-          );
-        }
-        select_network_chang();
-      },
-      function (error) {
-        console.log("出错了：" + error);
-      },
-    );
-  }
-
-  //新建按钮按下事件
-  $("#button_create").click(function () {
-    //utools.dbStorage.setItem('plan_list_db', {maxno:2,data:[[1,'192.168.10.1','255.255.255.0',''],[2,'192.168.10.2','255.255.255.0','']]});
-    const result = check_address_subnetmask_router();
-    if (result.error) return;
-    let maxno = 1;
-    const db = utools.dbStorage.getItem("plan_list_db");
-    if (db === null) {
-      utools.dbStorage.setItem("plan_list_db", {
-        maxno: maxno,
-        data: [[1, result.address, result.subnetmask, result.router,result.beizu]],
-      });
-    } else {
-      maxno = db.maxno + 1;
-      db.data.push([maxno, result.address, result.subnetmask, result.router,result.beizu]);
-      utools.dbStorage.setItem("plan_list_db", { maxno: maxno, data: db.data });
-    }
-    const tbody = $("#tbody_plan_list");
-    const tr = `<tr id="tbody_tr_plan_${maxno}" class="table-striped" style="cursor:pointer" onclick="tablePlanTrClick(${maxno});"><td>${result.address}</td><td>${result.beizu}</td></tr>`;
-    tbody.append(tr);
-    //console.log(utools.dbStorage.getItem('plan_list_db'))
-  });
-
-  //修改按钮被按下事件
-  $("#button_update").click(function () {
-    const updataid = $("#hidden_curr_plan_id").val();
-    //console.log('updataid = ' + updataid);
-    if (updataid === "") {
-      alert("请先在左边列表选择一个要修改的方案");
-      return;
-    }
-
-    const numberupdataid = Number(updataid);
-
-    const result = check_address_subnetmask_router();
-    if (result.error) return;
-
-    const db = utools.dbStorage.getItem("plan_list_db");
-
-    for (let i = 0; i < db.data.length; i++) {
-      if (db.data[i][0] === numberupdataid) {
-        db.data[i][1] = result.address;
-        db.data[i][2] = result.subnetmask;
-        db.data[i][3] = result.router;
-        db.data[i][4] = result.beizu;
-        //const tr = `<tr id="tbody_tr_plan_${updataid}" class="table-striped" style="cursor:pointer" onclick="tablePlanTrClick(${updataid});"><td>${result.address}</td></tr>`;
-        //console.log($("#tbody_tr_plan_" + updataid + " td:first").text());
-        $("#tbody_tr_plan_" + updataid + " td:first").text(result.address);
-        $("#tbody_tr_plan_" + updataid + " td:last").text(result.beizu);
-        utools.dbStorage.setItem("plan_list_db", {
-          maxno: db.maxno,
-          data: db.data,
-        });
-
-        break;
-      }
-    }
-  });
-
-  //删除按钮被按下事件
-  $("#button_delete").click(function () {
-    //utools.dbStorage.removeItem("plan_list_db");
-    const delid = $("#hidden_curr_plan_id").val();
-    //console.log('delid = ' + delid);
-    if (delid === "") {
-      alert("请先在左边列表选择一个要删除的方案");
-      return;
-    }
-    const numberdelid = Number(delid);
-    const db = utools.dbStorage.getItem("plan_list_db");
-    for (let i = 0; i < db.data.length; i++) {
-      if (db.data[i][0] === numberdelid) {
-        $("#tbody_tr_plan_" + delid).remove();
-        db.data.splice(i, 1);
-        utools.dbStorage.setItem("plan_list_db", {
-          maxno: db.maxno,
-          data: db.data,
-        });
-        clearAllInput();
-        break;
-      }
-    }
-    
-  });
-
-  //每隔 3 秒就更新一次右侧网卡信息
-  setInterval(select_network_chang, 3000);
+const { createApp } = Vue;
+utools.onPluginEnter(()=>{
+  IPTOOLS.plugin_showing = true;
+  console.log("进入插件, 开始执行定时任务");
+});
+utools.onPluginOut(()=>{
+  IPTOOLS.plugin_showing = false;
+  console.log("退出插件, 暂停执行定时任务");
 });
 
-//检测输入框的内容是否合规，有就检测，没有就不检测，但Ipv4必须要有
-function check_address_subnetmask_router() {
-  const address = $("#input_Address").val().trim();
-  if (!isValidIP(address)) {
-    alert("请输入有效的 IPv4 地址");
-    $("#input_Address").focus();
-    return { error: true };
-  }
+const VUEApp = {
+  data() {
+    return {
+      
+      plan_list_db: null, //存储的所有方案数据
+      curr_plan_id: 0, //存储当前左边列表中选中的方案 id, 不是 index
 
-  const subnetmask = $("#input_Subnetmask").val().trim();
-  if (subnetmask.length > 0 && !isValidSubnetMask(subnetmask)) {
-    alert("请输入有效的子网掩码");
-    $("#input_Subnetmask").focus();
-    return { error: true };
-  }
-  const router = $("#input_Router").val().trim();
-  if (router.length > 0 && !isValidIP(router)) {
-    alert("请输入有效的网关地址");
-    $("#input_Router").focus();
-    return { error: true };
-  }
+      network_selected: '',//当前选择的网卡
+      network_options: [],//网卡列表
+
+      //输入框里面的数据
+      input_data: {
+        address: '',
+        subnetmask: '255.255.255.0',
+        router: '',
+        beizu: '',
+        dns1: '',
+        dns2: ''
+      },
+      //右侧信息
+      right_span_infos: {
+        method: '',
+        address: '',
+        subnetmask: '',
+        router: '',
+        dns1: '',
+        dns2: ''
+      }
+    }
+  },
+  created() {
+    this.get_plan_list_db();
+    this.getInterfaceList();
+  },
+
+  mounted() {
+    //this.select_network_chang();
+    //每隔 3 秒就更新一次右侧网卡信息
+    setInterval(this.select_network_chang, 3000);
+  },
+
+  watch: {
+    // 每当 network_selected 改变时，这个函数就会执行
+    network_selected() {
+      //console.log("值改变了")
+      this.select_network_chang();
+    }
+  },
+
+  methods: {
+    //从 dbStorage 中获取方案数据
+    get_plan_list_db() {
+      const db = utools.dbStorage.getItem(DB_NAME);
+
+      if (db) {
+        this.plan_list_db = db;
+      } else {
+        this.plan_list_db = { maxno: 0, data: [] };
+      }
+
+    },
+
+    refresh_right_infos(networkInfos) {
+
+      this.right_span_infos.method = networkInfos[0] || KONG;
+      this.right_span_infos.address = networkInfos[1] || KONG;
+      this.right_span_infos.subnetmask = networkInfos[2] || KONG;
+      this.right_span_infos.router = networkInfos[3] || KONG;
+      this.right_span_infos.dns1 = networkInfos[4] || KONG;
+      this.right_span_infos.dns2 = networkInfos[5] || KONG;
+    },
+
+    //方案列表点击事件
+    tablePlanTrClick(planid) {
+
+      this.curr_plan_id = Number(planid);
+
+      for (const it of this.plan_list_db.data) {
+        if (it[0] === planid) {
+          this.input_data.address = it[1] || '';
+          this.input_data.subnetmask = it[2] || '';
+          this.input_data.router = it[3] || '';
+          this.input_data.beizu = it[4] || '';
+          this.input_data.dns1 = it[5] || '';
+          this.input_data.dns2 = it[6] || '';
+          break;
+        }
+      }
+    },
+
+    //获取网卡列表
+    async getInterfaceList() {
+      const res = await window.ipchangServices.getNetworkNameList();
+      const networkNameList = IPTOOLS.parseNetworkNameList(res);
+      for (const it of networkNameList) {
+        const option = { text: it, value: it };
+        this.network_options.push(option);
+      }
+      this.network_selected = this.network_options[0].value;
+      
+    },
+
+    //使用 DHCP 按钮事件
+    async button_use_dhcp() {
+      if (this.network_selected === "") {
+        alert("请先选择要设置的网卡");
+        return;
+      }
+      try {
+        //先清空前面手动设置的 DNS, 不管有没有手动设置过
+        await window.ipchangServices.setDnsInfo(this.network_selected, 'Empty');
+        //再把网址设置为 DHCP 自动获取模式
+        await window.ipchangServices.setNetworkToDHCP(this.network_selected);
+        this.refresh_right_infos([
+           'DHCP自动',
+           '获取中...',
+           '获取中...',
+           '获取中...',
+           '获取中...',
+           '获取中...'
+        ]);
+
+      } catch (error) {
+        console.error("出错了：" + error);
+        alert("当前网卡已经是 DHCP自动 模式");
+      }
+
+    },
 
 
-  return {
-    error: false,
-    address: address,
-    subnetmask: subnetmask,
-    router: router,
-    beizu:$("#input_Beizu").val().trim()
-  };
-}
+    //新建按钮按下事件
+    button_create() {
+      if (!check_address_subnetmask_router(this.input_data)) return;
 
-//清空输入框
-function clearAllInput() {
-  $("#hidden_curr_plan_id").val("");
-  $("#input_Address").val("");
-  $("#input_Subnetmask").val("");
-  $("#input_Router").val("");
-}
+      const db = utools.dbStorage.getItem(DB_NAME);
+      let newdata = null;
+      if (db) {
+        const maxno = db.maxno + 1;
+        const newfanan = [maxno, this.input_data.address, this.input_data.subnetmask, this.input_data.router, this.input_data.beizu, this.input_data.dns1, this.input_data.dns2];
+        db.data.push(newfanan);
+        newdata = { maxno: maxno, data: db.data };
+      } else {
+        const newfanan = [1, this.input_data.address, this.input_data.subnetmask, this.input_data.router, this.input_data.beizu, this.input_data.dns1, this.input_data.dns2];
+        newdata = { maxno: 1, data: [newfanan] };
+      }
+      this.plan_list_db = newdata;
+      utools.dbStorage.setItem(DB_NAME, newdata);
+    },
 
-//填充左边方案列表
-function renewLeftPlanList() {
-  const db = utools.dbStorage.getItem("plan_list_db");
-  //console.log(db)
-  if (db === null) return;
-  const tbody = $("#tbody_plan_list");
-  for (let i = 0; i < db.data.length; i++) {
-    const beizu = db.data[i][4] || '';
-    const tr = `<tr id="tbody_tr_plan_${db.data[i][0]}" class="table-striped" style="cursor:pointer" onclick="tablePlanTrClick(${db.data[i][0]});"><td>${db.data[i][1]}</td><td>${beizu}</td></tr>`;
-    tbody.append(tr);
-  }
-}
+    //修改按钮被按下事件
+    button_update() {
+      if (this.curr_plan_id === 0) {
+        alert("请先在左边列表选择一个要修改的方案");
+        return;
+      }
 
-//方案列表点击事件
-function tablePlanTrClick(planid) {
-  $(".table-striped").css("background-color", "white");
-  $("#tbody_tr_plan_" + planid).css("background-color", "#f0f0f5");
+      if (!check_address_subnetmask_router(this.input_data)) return;
 
-  const db = utools.dbStorage.getItem("plan_list_db");
-  for (let i = 0; i < db.data.length; i++) {
-    if (db.data[i][0] === planid) {
-      $("#hidden_curr_plan_id").val(planid);
-      $("#input_Address").val(db.data[i][1]);
-      $("#input_Subnetmask").val(db.data[i][2]);
-      $("#input_Router").val(db.data[i][3]);
-      $("#input_Beizu").val(db.data[i][4]);
-      break;
+      const db = utools.dbStorage.getItem(DB_NAME);
+
+      for (let i = 0; i < db.data.length; i++) {
+        if (db.data[i][0] === this.curr_plan_id) {
+          db.data[i][1] = this.input_data.address;
+          db.data[i][2] = this.input_data.subnetmask;
+          db.data[i][3] = this.input_data.router;
+          db.data[i][4] = this.input_data.beizu;
+          db.data[i][5] = this.input_data.dns1;
+          db.data[i][6] = this.input_data.dns2;
+
+          const newdata = { maxno: db.maxno, data: db.data };
+          this.plan_list_db = newdata;
+          utools.dbStorage.setItem(DB_NAME, newdata);
+
+          break;
+        }
+      }
+    },
+
+
+    //删除按钮被按下事件
+    button_delete() {
+
+      if (this.curr_plan_id === 0) {
+        alert("请先在左边列表选择一个要删除的方案");
+        return;
+      }
+
+      const db = utools.dbStorage.getItem(DB_NAME);
+      for (let i = 0; i < db.data.length; i++) {
+        if (db.data[i][0] === this.curr_plan_id) {
+          this.curr_plan_id = 0;
+          db.data.splice(i, 1);
+          const newdata = { maxno: db.maxno, data: db.data };
+          this.plan_list_db = newdata;
+          utools.dbStorage.setItem(DB_NAME, newdata);
+          this.clearAllInput();
+          break;
+        }
+      }
+
+    },
+
+    //应用 按钮按下事件
+    async button_application() {
+
+      if (this.network_selected === "") {
+        alert("请先选择要设置的网卡");
+        return;
+      }
+
+      if (!check_address_subnetmask_router(this.input_data)) return;
+
+      const shellInfo = IPTOOLS.parseManualShell(this.input_data);
+      if (shellInfo.error) return;
+
+      //先处理 dns 相关内容
+      const dnsInfos = (this.input_data.dns1 + " " + this.input_data.dns2).trim();
+
+      if (dnsInfos.length > 6) {
+        await window.ipchangServices.setDnsInfo(this.network_selected, dnsInfos);
+      } else {
+        await window.ipchangServices.setDnsInfo(this.network_selected, 'Empty');
+
+      }
+
+      await window.ipchangServices.setNetworkToManual(this.network_selected, shellInfo);
+      const method = (shellInfo.method === 'setmanualwithdhcprouter' ? 'DHCP手动' : '手动设定');
+
+      this.refresh_right_infos([
+        method, 
+        this.input_data.address,
+        this.input_data.subnetmask,
+        this.input_data.router,
+        this.input_data.dns1,
+        this.input_data.dns2
+      ]);
+
+    },
+
+
+
+    //清空输入框
+    clearAllInput() {
+      for (const it in this.input_data) {
+        this.input_data[it] = '';
+      }
+    },
+
+    //网卡列表改变事件
+    async select_network_chang() {
+
+      if (IPTOOLS.plugin_showing === false || IPTOOLS.task_Interval_running === true || this.network_selected === "") return;
+
+      IPTOOLS.task_Interval_running = true;
+
+      try {
+        //获取网点 ip 信息
+        const networkcardInfo = await window.ipchangServices.getNetworkInfo(this.network_selected);
+        const array_carInfo = IPTOOLS.parseNetworkInfos(networkcardInfo)
+        //获取 dns 信息
+        const dnsinfo = await window.ipchangServices.getDnsInfos(this.network_selected);
+        const dnsArray = IPTOOLS.parseDnsInfo(dnsinfo);
+        array_carInfo[4] = dnsArray[0];
+        array_carInfo[5] = dnsArray[1];
+
+        this.refresh_right_infos(array_carInfo);
+      } catch (error) {
+        console.error("出错了：" + error);
+      } finally {
+        IPTOOLS.task_Interval_running = false;
+      }
     }
   }
-}
+};
 
-//根据网卡名称和信息更新右侧网卡信息
-function renewNetworkcardInfo(networkcardName, networkcardInfo) {
-  $("#span_network_name").text(networkcardName);
-  const infos = iptools.parseNetworkInfos(networkcardInfo);
-  updateSpan_right_info(infos);
-}
+// 挂载Vue应用到id为app的DOM元素上
+createApp(VUEApp).mount('.container-fluid');
 
-//网卡列表改变事件
-function select_network_chang() {
-  if(iptools.task_Interval_running === true) return;
-  iptools.task_Interval_running = true;
-  const theNetworkName = $("#select_network_list").val();
-  if (theNetworkName === "") return;
-
-  window.services.getNetworkInfo(theNetworkName).then(
-    function (networkcardInfo) {
-      renewNetworkcardInfo(theNetworkName, networkcardInfo);
-    },
-    function (error) {
-      console.log("出错了：" + error);
-    },
-  ).finally(()=> {
-    iptools.task_Interval_running = false;
-  }
-
-  );
-}
-
-function updateSpan_right_info(infos) {
-  $("#span_ip_getMethod").text(infos[0]);
-  $("#span_ip_Address").text(infos[1]);
-  $("#span_ip_Subnetmask").text(infos[2]);
-  $("#span_ip_Router").text(infos[3]);
-}

@@ -1,12 +1,8 @@
-const iptools = {
-  //更新网卡信息的定时任务是否正在运行，true为正在运行
-  task_Interval_running: false
-};
 
 (function () {
   if (utools.isMacOS()) {
     //1 MacOS 下解析获取网卡列表字符串
-    iptools.parseNetworkNameList = function (result) {
+    IPTOOLS.parseNetworkNameList = function (result) {
       const res = result.split("\n");
       const networkNameList = [];
       for (let i = 0; i < res.length; i++) {
@@ -21,7 +17,7 @@ const iptools = {
     };
 
     //2 MacOS 下解析某个网卡信息字符串
-    iptools.parseNetworkInfos = function (networkcardInfo) {
+    IPTOOLS.parseNetworkInfos = function (networkcardInfo) {
       const res = networkcardInfo.split("\n");
       const cardInfos = [];
       for (let i = 0; i < res.length; i++) {
@@ -40,14 +36,14 @@ const iptools = {
         } else if (res[i].indexOf("Router") === 0) {
           cardInfos[3] = res[i]
             .substr(res[i].indexOf(":") + 2)
-            .replace("(null)", "空");
+            .replace("(null)", KONG);
         }
       }
       return cardInfos;
     };
 
     //3 MacOS 下解析手动设置网卡信息
-    iptools.parseManualShell = function (networkcardInfo) {
+    IPTOOLS.parseManualShell = function (networkcardInfo) {
 
       //ip 和 网关都填写了但没有填写掩码
       if (
@@ -56,7 +52,7 @@ const iptools = {
         networkcardInfo.router.length > 0
       ) {
         alert("请输入子网掩码");
-        $("#input_Subnetmask").focus();
+        setFocus('subnetmask');
         return { error: true };
       }
 
@@ -88,14 +84,25 @@ const iptools = {
           return { error: false, method: "setmanual", addressInfo: addressInfo };
         } else {
           return { error: false, method: "setmanualNorouter", addressInfo: addressInfo };
-        }        
-      }      
+        }
+      }
     };
 
-    
+    //Macos 下解析dns 信息
+    IPTOOLS.parseDnsInfo = function (dnsinfo) {
+      const dnsArray = dnsinfo.split('\n');
+      const result = [];
+      for(const it of dnsArray){
+        if(isValidIP(it)) {
+          result.push(it)
+        }        
+      }
+      return result;
+    }
+
   } else if (utools.isWindows()) {
     //1 Windows 下解析各个系统返回的获取网卡列表字符串
-    iptools.parseNetworkNameList = function (result) {
+    IPTOOLS.parseNetworkNameList = function (result) {
       const res = result.replace(/\r/g, "").split("\n");
       const networkNameList = [];
       for (let i = 0; i < res.length; i++) {
@@ -109,8 +116,8 @@ const iptools = {
     };
 
     //2 Windows 下解析某个网卡信息字符串
-    iptools.parseNetworkInfos = function (networkcardInfo) {
-      const infos = ["未知", "", "", "空"];
+    IPTOOLS.parseNetworkInfos = function (networkcardInfo) {
+      const infos = ["未知", "", "", KONG];
       const arrayInfos = networkcardInfo.replace(/\r/g, "").split("\n");
       for (let i = 0; i < arrayInfos.length; i++) {
         const itinfo = arrayInfos[i].trim().split(/\s{2,}/);
@@ -137,7 +144,7 @@ const iptools = {
     };
 
     //3 Windows 下解析手动设置网卡信息
-    iptools.parseManualShell = (networkcardInfo) => {
+    IPTOOLS.parseManualShell = (networkcardInfo) => {
       if (
         networkcardInfo.address.length > 0 &&
         networkcardInfo.subnetmask.length === 0 &&
@@ -161,6 +168,47 @@ const iptools = {
   }
 
 })();
+
+function setFocus(nodeName) {
+  document.getElementById(nodeName).focus();
+}
+
+//检测输入框的内容是否合规，有就检测，没有就不检测，但Ipv4必须要有
+function check_address_subnetmask_router(input_data) {
+      
+  if (!isValidIP(input_data.address)) {
+    alert("请输入有效的 IPv4 地址");
+    setFocus('address');
+    return false;
+  }
+
+  if (input_data.subnetmask.length > 0 && !isValidSubnetMask(input_data.subnetmask)) {
+    alert("请输入有效的 子网掩码");
+    setFocus('subnetmask');
+    return false;
+  }
+
+
+  if (input_data.router.length > 0 && !isValidIP(input_data.router)) {
+    alert("请输入有效的 网关地址");
+    setFocus('router');
+    return false;
+  }
+
+  if (input_data.dns1.length > 0 && !isValidIP(input_data.dns1)) {
+    alert("请输入有效的 首选DNS 地址");
+    setFocus('dns1');
+    return false;
+  }
+
+  if (input_data.dns2.length > 0 && !isValidIP(input_data.dns2)) {
+    alert("请输入有效的 备用DNS 地址");
+    setFocus('dns2');
+    return false;
+  }
+
+  return true;
+}
 
 // 正则表达式验证子网掩码
 function isValidSubnetMask(subnetMask) {
