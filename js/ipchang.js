@@ -1,11 +1,11 @@
 const { createApp } = Vue;
 utools.onPluginEnter(()=>{
   IPTOOLS.plugin_showing = true;
-  console.log("进入插件, 开始执行定时任务");
+  console.info("进入插件, 开始执行获取网卡信息的定时任务");
 });
 utools.onPluginOut(()=>{
   IPTOOLS.plugin_showing = false;
-  console.log("退出插件, 暂停执行定时任务");
+  console.info("退出插件, 暂停执行获取网卡信息的定时任务");
 });
 
 const VUEApp = {
@@ -44,15 +44,13 @@ const VUEApp = {
   },
 
   mounted() {
-    //this.select_network_chang();
     //每隔 3 秒就更新一次右侧网卡信息
     setInterval(this.select_network_chang, 3000);
   },
 
   watch: {
-    // 每当 network_selected 改变时，这个函数就会执行
+    // 每当 network_selected 改变时，就立即去更新右侧的网卡信息
     network_selected() {
-      //console.log("值改变了")
       this.select_network_chang();
     }
   },
@@ -70,6 +68,7 @@ const VUEApp = {
 
     },
 
+    //更新右侧网卡信息
     refresh_right_infos(networkInfos) {
 
       this.right_span_infos.method = networkInfos[0] || KONG;
@@ -191,7 +190,7 @@ const VUEApp = {
     button_delete() {
 
       if (this.curr_plan_id === 0) {
-        alert("请先在左边列表选择一个要删除的方案");
+        alert("请先在左边方案列表中选择一个要删除的方案");
         return;
       }
 
@@ -226,11 +225,17 @@ const VUEApp = {
       //先处理 dns 相关内容
       const dnsInfos = (this.input_data.dns1 + " " + this.input_data.dns2).trim();
 
+      //如果设置了 dns
       if (dnsInfos.length > 6) {
         await window.ipchangServices.setDnsInfo(this.network_selected, dnsInfos);
       } else {
-        await window.ipchangServices.setDnsInfo(this.network_selected, 'Empty');
-
+        //没有设置 dns 但是设置了网关, 就把网关作为 dns
+        if(this.input_data.router.length > 0) {
+          await window.ipchangServices.setDnsInfo(this.network_selected, this.input_data.router);
+        } else {
+          await window.ipchangServices.setDnsInfo(this.network_selected, 'Empty');
+        }
+        
       }
 
       await window.ipchangServices.setNetworkToManual(this.network_selected, shellInfo);
@@ -261,19 +266,10 @@ const VUEApp = {
 
       if (IPTOOLS.plugin_showing === false || IPTOOLS.task_Interval_running === true || this.network_selected === "") return;
 
-      IPTOOLS.task_Interval_running = true;
-
-      try {
-        //获取网点 ip 信息
-        const networkcardInfo = await window.ipchangServices.getNetworkInfo(this.network_selected);
-        const array_carInfo = IPTOOLS.parseNetworkInfos(networkcardInfo)
-        //获取 dns 信息
-        const dnsinfo = await window.ipchangServices.getDnsInfos(this.network_selected);
-        const dnsArray = IPTOOLS.parseDnsInfo(dnsinfo);
-        array_carInfo[4] = dnsArray[0];
-        array_carInfo[5] = dnsArray[1];
-
-        this.refresh_right_infos(array_carInfo);
+      try {        
+        IPTOOLS.task_Interval_running = true;
+        const res  = await IPTOOLS.getParseIPandDnsInfo(this.network_selected);
+        this.refresh_right_infos(res);
       } catch (error) {
         console.error("出错了：" + error);
       } finally {

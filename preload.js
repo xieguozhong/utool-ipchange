@@ -71,16 +71,18 @@ window.ipchangServices = {};
 
     //6 Macos 下获取网卡的 dns 信息(从/etc/resolv.conf 文件中读取)
     window.ipchangServices.getDnsFromResolv = () => {
-      const shell = `cat /etc/resolv.conf`;
+      const shell = `cat /etc/resolv.conf |grep nameserver`;
       return pubcomm_exec_promise(shell);
     };
 
     //7 Macos 下设置网卡的 dns 信息
-    window.ipchangServices.setDnsInfo = (hardwarePortName, dnsInfo) => {
+    window.ipchangServices.setDnsInfo = async (hardwarePortName, dnsInfo) => {
       const shell = `networksetup -setdnsservers "${hardwarePortName}" ${dnsInfo}`;
-      return pubcomm_exec_promise(shell);
-    };
+      await pubcomm_exec_promise(shell);
 
+      //清空 DNS 缓存
+      return pubcomm_exec_promise(`dscacheutil -flushcache`);
+    }; 
 
   } else if (utools.isWindows()) {
     //1 Windows 下获取网卡名称列表
@@ -90,8 +92,8 @@ window.ipchangServices = {};
     };
 
     //2 Windows 下根据网卡名称获取网卡的信息
-    window.ipchangServices.getNetworkInfo = (hardwarePortName) => {
-      const shell = `chcp 65001 && netsh interface ip show address "${hardwarePortName}"`;
+    window.ipchangServices.getNetworkInfo = () => {
+      const shell = `chcp 65001 && ipconfig /all`;
       return pubcomm_exec_promise(shell);
     };
 
@@ -106,5 +108,29 @@ window.ipchangServices = {};
       const shell = `netsh interface ip set address "${hardwarePortName}" static ${shellInfo.addressInfo}`;
       return pubcomm_exec_promise(shell);
     };
+
+    // Windows 下设置某网卡的 DNS 信息 dnsInfo 为 Empty 表示清空 DNS 信息
+    window.ipchangServices.setDnsInfo = (hardwarePortName, dnsInfo) => {
+      let shell = '';
+      //清空 DNS
+      if(dnsInfo === 'Empty') {
+        const shell = `netsh interface ip set dns name="${hardwarePortName}" source=dhcp && ipconfig /flushdns`;
+        return pubcomm_exec_promise(shell);
+      } else {
+        const arraydns = dnsInfo.split(' ');      
+        //设置首选 DNS
+        if(arraydns[0]) {
+          shell = `netsh interface ip set dns name="${hardwarePortName}" static ${arraydns[0]} primary`;
+        }
+        //设置备选 DNS
+        if(arraydns[1]) {
+          shell = shell + ` && netsh interface ip add dns name="${hardwarePortName}" ${arraydns[1]} index=2`;
+        }
+        //刷新 DNS 缓存
+        shell = shell + " && ipconfig /flushdns"
+      }
+      
+      return pubcomm_exec_promise(shell);
+    }; 
   }
 })();

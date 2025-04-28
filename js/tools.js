@@ -100,6 +100,32 @@
       return result;
     }
 
+    //Macos 下获取网卡的 ip和dns 信息的统一处理过程
+    IPTOOLS.getParseIPandDnsInfo = async function (network_name) {
+      //获取网卡 ip 信息
+      const networkcardInfo = await window.ipchangServices.getNetworkInfo(network_name);
+      const array_carInfo = IPTOOLS.parseNetworkInfos(networkcardInfo);
+
+      //获取网卡的 dns 信息
+      const dnsinfo = await window.ipchangServices.getDnsInfos(network_name);
+      const dnsArray = IPTOOLS.parseDnsInfo(dnsinfo);
+
+      //如果找不到网卡的 dns 信息, 就去找系统的 dns 信息
+      if(dnsArray.length === 0) {
+        const resolvdns = await window.ipchangServices.getDnsFromResolv();
+        const resArray = resolvdns.split('\n');
+        for(const it of resArray) {            
+          const ns = it.split(' ')[1];
+          if(ns && isValidIP(ns)) {
+            dnsArray.push(ns);
+          }
+        }
+      }
+      array_carInfo[4] = dnsArray[0];
+      array_carInfo[5] = dnsArray[1];
+      return array_carInfo;
+    }
+
   } else if (utools.isWindows()) {
     //1 Windows 下解析各个系统返回的获取网卡列表字符串
     IPTOOLS.parseNetworkNameList = function (result) {
@@ -116,34 +142,61 @@
     };
 
     //2 Windows 下解析某个网卡信息字符串
-    IPTOOLS.parseNetworkInfos = function (networkcardInfo) {
-      const infos = ["未知", "", "", KONG];
-      const arrayInfos = networkcardInfo.replace(/\r/g, "").split("\n");
-      for (let i = 0; i < arrayInfos.length; i++) {
-        const itinfo = arrayInfos[i].trim().split(/\s{2,}/);
+    IPTOOLS.parseNetworkInfos = function (network_name, networkcardInfo) {
+      const infos = [KONG,KONG,KONG,KONG,KONG,KONG];
+      const arrayNetworkcardInfo = networkcardInfo.replace(/\r/g,"").split('\n');
 
-        if (itinfo[0] === "DHCP enabled:") {
-          if (itinfo[1] === "Yes") {
-            infos[0] = "DHCP自动";
-          } else if (itinfo[1] === "No") {
-            infos[0] = "手动设定";
+      const starindex = arrayNetworkcardInfo.findIndex(item => typeof item === 'string' && item.includes(`adapter ${network_name}`));
+
+      for(let i = starindex+1,len=arrayNetworkcardInfo.length;i<len;i++) {
+        const it = arrayNetworkcardInfo[i].trim();
+
+        if(it.startsWith("DHCP Enabled")) {
+          infos[0] = it.includes("Yes") ? "DHCP自动" : "手动设定";
+        }
+        else if(it.startsWith('IPv4 Address')) {
+          infos[1] = it.substring(it.indexOf(':')+2, it.indexOf('('));
+        }
+        else if(it.startsWith('Subnet Mask')) {
+          infos[2] = it.substring(it.indexOf(':')+2);
+        }
+        else if(it.startsWith('Default Gateway')) {
+          const gateway = it.substring(it.indexOf(':')+2);
+          if(gateway && isValidIP(gateway)) {
+            infos[3] = gateway;
+          } else {
+            const nextip = arrayNetworkcardInfo[i+1]?.trim();
+            if(nextip && isValidIP(nextip)) {
+              infos[3] =  nextip;
+            }    
           }
-        } else if (itinfo[0] === "IP Address:") {
-          infos[1] = itinfo[1];
-        } else if (itinfo[0] === "Subnet Prefix:") {
-          infos[2] = itinfo[1].substring(
-            itinfo[1].lastIndexOf(" ") + 1,
-            itinfo[1].length - 1,
-          );
-        } else if (itinfo[0] === "Default Gateway:") {
-          infos[3] = itinfo[1];
+        }
+        else if(it.startsWith('DNS Servers')) {
+          const dnsip = it.substring(it.indexOf(':')+2);
+          if(dnsip && isValidIP(dnsip)) {
+            infos[4] = dnsip;
+            const nextip = arrayNetworkcardInfo[i+1]?.trim();
+            if(nextip && isValidIP(nextip)) {
+              infos[5] =  nextip;
+            }    
+          } else {
+            const nextip = arrayNetworkcardInfo[i+1]?.trim();
+            if(nextip && isValidIP(nextip)) {
+              infos[4] =  nextip;
+            }
+            const nextip2 = arrayNetworkcardInfo[i+2]?.trim();
+            if(nextip2 && isValidIP(nextip2)) {
+              infos[5] =  nextip2;
+            }
+          }
+
+          break;
         }
       }
-
       return infos;
     };
 
-    //3 Windows 下解析手动设置网卡信息
+    //3 Windows 下手动设置网卡信息
     IPTOOLS.parseManualShell = (networkcardInfo) => {
       if (
         networkcardInfo.address.length > 0 &&
@@ -151,7 +204,7 @@
         networkcardInfo.router.length > 0
       ) {
         alert("请输入子网掩码");
-        $("#input_Subnetmask").focus();
+        setFocus('subnetmask');
         return { error: true };
       }
 
@@ -164,6 +217,12 @@
       }
       return { error: false, method: "setmanual", addressInfo: addressInfo };
     };
+
+    //Windows 下获取网卡的 ip和dns 信息的统一处理过程
+    IPTOOLS.getParseIPandDnsInfo = async function (network_name) {
+      const infos = await window.ipchangServices.getNetworkInfo();
+      return IPTOOLS.parseNetworkInfos(network_name, infos);
+    }
 
   }
 
