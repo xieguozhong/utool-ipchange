@@ -1,11 +1,11 @@
 {
 	"main": "index.html",
 	"logo": "logo.png",
-	"preload": "preload.js",
-	"platform": ["win32", "darwin"],
+	"preload": "preload.js",	
 	"features": [
 		{
 		  "code": "ipchange",
+		  "platform": ["win32", "darwin"],
 		  "explain": "IP 地址快速切换工具",
 			"cmds":["ipchange","ip地址快速切换工具", "ipconfig"]
 		}
