@@ -103,7 +103,7 @@ window.ipchangServices = {};
       return pubcomm_exec_promise(shell);
     };
 
-    //4 Windows 下把某个网卡设置为手动
+    //4 Windows 下把某个网卡设置为手动ip
     window.ipchangServices.setNetworkToManual = (hardwarePortName, shellInfo) => {
       const shell = `netsh interface ip set address "${hardwarePortName}" static ${shellInfo.addressInfo}`;
       return pubcomm_exec_promise(shell);
@@ -114,10 +114,9 @@ window.ipchangServices = {};
       let shell = '';
       //清空 DNS
       if(dnsInfo === 'Empty') {
-        const shell = `netsh interface ip set dns name="${hardwarePortName}" source=dhcp && ipconfig /flushdns`;
-        return pubcomm_exec_promise(shell);
+        shell = `netsh interface ip set dns name="${hardwarePortName}" source=dhcp`;        
       } else {
-        const arraydns = dnsInfo.split(' ');      
+        const arraydns = dnsInfo.split(' ');
         //设置首选 DNS
         if(arraydns[0]) {
           shell = `netsh interface ip set dns name="${hardwarePortName}" static ${arraydns[0]} primary`;
@@ -126,10 +125,10 @@ window.ipchangServices = {};
         if(arraydns[1]) {
           shell = shell + ` && netsh interface ip add dns name="${hardwarePortName}" ${arraydns[1]} index=2`;
         }
-        //刷新 DNS 缓存
-        shell = shell + " && ipconfig /flushdns"
+        
       }
-      
+      //刷新 DNS 缓存
+      shell = shell + " && ipconfig /flushdns";
       return pubcomm_exec_promise(shell);
     }; 
   }
