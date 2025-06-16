@@ -100,7 +100,8 @@
                     方案功能：
                             <button type="button" class="btn btn-info btn-sm" @click="button_create">新建</button>&nbsp;
                             <button type="button" class="btn btn-info btn-sm" @click="button_update">修改</button>&nbsp;
-                            <button type="button" class="btn btn-info btn-sm" @click="button_delete">删除</button>      
+                            <button type="button" class="btn btn-info btn-sm" @click="button_delete">删除</button>&nbsp;
+                            <button type="button" class="btn btn-info btn-sm" @click="clearAllInput">清空</button>    
                   </div>
                   
             </div>
@@ -108,12 +109,7 @@
             <div class="col-3">
                 <div style="margin-left: 10px">
                     <address>网卡：
-                        <strong><span>{{network_selected}}</span></strong>&nbsp;&nbsp;<img @click="select_network_chang"
-                            src="./img/refresh.png" alt="刷新网卡信息" title="刷新网卡信息" class="img-circle" style="
-                                    width: 23px;
-                                    height: 23px;
-                                    cursor: pointer;
-                                " /><br />
+                        <strong><span>{{network_selected}}</span></strong><br />
                         方式：<span style="border-bottom: 1px solid">{{right_span_infos.method}}</span><br />
                         地址：<span style="border-bottom: 1px solid">{{right_span_infos.address}}</span><br />
                         掩码：<span style="border-bottom: 1px solid">{{right_span_infos.subnetmask}}</span><br />
