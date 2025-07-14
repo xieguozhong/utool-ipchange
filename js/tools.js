@@ -92,10 +92,10 @@
     IPTOOLS.parseDnsInfo = function (dnsinfo) {
       const dnsArray = dnsinfo.split('\n');
       const result = [];
-      for(const it of dnsArray){
-        if(isValidIP(it)) {
+      for (const it of dnsArray) {
+        if (isValidIP(it)) {
           result.push(it)
-        }        
+        }
       }
       return result;
     }
@@ -111,12 +111,12 @@
       const dnsArray = IPTOOLS.parseDnsInfo(dnsinfo);
 
       //如果找不到网卡的 dns 信息, 就去找系统的 dns 信息
-      if(dnsArray.length === 0) {
+      if (dnsArray.length === 0) {
         const resolvdns = await window.ipchangServices.getDnsFromResolv();
         const resArray = resolvdns.split('\n');
-        for(const it of resArray) {            
+        for (const it of resArray) {
           const ns = it.split(' ')[1];
-          if(ns && isValidIP(ns)) {
+          if (ns && isValidIP(ns)) {
             dnsArray.push(ns);
           }
         }
@@ -143,50 +143,50 @@
 
     //2 Windows 下解析某个网卡信息字符串
     IPTOOLS.parseNetworkInfos = function (network_name, networkcardInfo) {
-      const infos = [KONG,KONG,KONG,KONG,KONG,KONG];
-      const arrayNetworkcardInfo = networkcardInfo.replace(/\r/g,"").split('\n');
+      const infos = [KONG, KONG, KONG, KONG, KONG, KONG];
+      const arrayNetworkcardInfo = networkcardInfo.replace(/\r/g, "").split('\n');
 
       const starindex = arrayNetworkcardInfo.findIndex(item => typeof item === 'string' && item.includes(`adapter ${network_name}`));
 
-      for(let i = starindex+1,len=arrayNetworkcardInfo.length;i<len;i++) {
+      for (let i = starindex + 1, len = arrayNetworkcardInfo.length; i < len; i++) {
         const it = arrayNetworkcardInfo[i].trim();
 
-        if(it.startsWith("DHCP Enabled")) {
+        if (it.startsWith("DHCP Enabled")) {
           infos[0] = it.includes("Yes") ? "DHCP自动" : "手动设定";
         }
-        else if(it.startsWith('IPv4 Address')) {
-          infos[1] = it.substring(it.indexOf(':')+2, it.indexOf('('));
+        else if (it.startsWith('IPv4 Address')) {
+          infos[1] = it.substring(it.indexOf(':') + 2, it.indexOf('('));
         }
-        else if(it.startsWith('Subnet Mask')) {
-          infos[2] = it.substring(it.indexOf(':')+2);
+        else if (it.startsWith('Subnet Mask')) {
+          infos[2] = it.substring(it.indexOf(':') + 2);
         }
-        else if(it.startsWith('Default Gateway')) {
-          const gateway = it.substring(it.indexOf(':')+2);
-          if(gateway && isValidIP(gateway)) {
+        else if (it.startsWith('Default Gateway')) {
+          const gateway = it.substring(it.indexOf(':') + 2);
+          if (gateway && isValidIP(gateway)) {
             infos[3] = gateway;
           } else {
-            const nextip = arrayNetworkcardInfo[i+1]?.trim();
-            if(nextip && isValidIP(nextip)) {
-              infos[3] =  nextip;
-            }    
+            const nextip = arrayNetworkcardInfo[i + 1]?.trim();
+            if (nextip && isValidIP(nextip)) {
+              infos[3] = nextip;
+            }
           }
         }
-        else if(it.startsWith('DNS Servers')) {
-          const dnsip = it.substring(it.indexOf(':')+2);
-          if(dnsip && isValidIP(dnsip)) {
+        else if (it.startsWith('DNS Servers')) {
+          const dnsip = it.substring(it.indexOf(':') + 2);
+          if (dnsip && isValidIP(dnsip)) {
             infos[4] = dnsip;
-            const nextip = arrayNetworkcardInfo[i+1]?.trim();
-            if(nextip && isValidIP(nextip)) {
-              infos[5] =  nextip;
-            }    
-          } else {
-            const nextip = arrayNetworkcardInfo[i+1]?.trim();
-            if(nextip && isValidIP(nextip)) {
-              infos[4] =  nextip;
+            const nextip = arrayNetworkcardInfo[i + 1]?.trim();
+            if (nextip && isValidIP(nextip)) {
+              infos[5] = nextip;
             }
-            const nextip2 = arrayNetworkcardInfo[i+2]?.trim();
-            if(nextip2 && isValidIP(nextip2)) {
-              infos[5] =  nextip2;
+          } else {
+            const nextip = arrayNetworkcardInfo[i + 1]?.trim();
+            if (nextip && isValidIP(nextip)) {
+              infos[4] = nextip;
+            }
+            const nextip2 = arrayNetworkcardInfo[i + 2]?.trim();
+            if (nextip2 && isValidIP(nextip2)) {
+              infos[5] = nextip2;
             }
           }
 
@@ -234,7 +234,7 @@ function setFocus(nodeName) {
 
 //检测输入框的内容是否合规，有就检测，没有就不检测，但Ipv4必须要有
 function check_address_subnetmask_router(input_data) {
-      
+
   if (!isValidIP(input_data.address)) {
     alert("请输入有效的 IPv4 地址");
     setFocus('address');

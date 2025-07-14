@@ -1,9 +1,9 @@
 const { createApp } = Vue;
-utools.onPluginEnter(()=>{
+utools.onPluginEnter(() => {
   IPTOOLS.plugin_showing = true;
   console.info("进入插件, 开始执行获取网卡信息的定时任务");
 });
-utools.onPluginOut(()=>{
+utools.onPluginOut(() => {
   IPTOOLS.plugin_showing = false;
   console.info("退出插件, 暂停执行获取网卡信息的定时任务");
 });
@@ -11,7 +11,7 @@ utools.onPluginOut(()=>{
 const VUEApp = {
   data() {
     return {
-      
+
       plan_list_db: null, //存储的所有方案数据
       curr_plan_id: 0, //存储当前左边列表中选中的方案 id, 不是 index
 
@@ -106,7 +106,7 @@ const VUEApp = {
         this.network_options.push(option);
       }
       this.network_selected = this.network_options[0].value;
-      
+
     },
 
     //使用 DHCP 按钮事件
@@ -121,12 +121,12 @@ const VUEApp = {
         //再把网址设置为 DHCP 自动获取模式
         await window.ipchangServices.setNetworkToDHCP(this.network_selected);
         this.refresh_right_infos([
-           'DHCP自动',
-           '获取中...',
-           '获取中...',
-           '获取中...',
-           '获取中...',
-           '获取中...'
+          'DHCP自动',
+          '获取中...',
+          '获取中...',
+          '获取中...',
+          '获取中...',
+          '获取中...'
         ]);
 
       } catch (error) {
@@ -225,31 +225,42 @@ const VUEApp = {
       //先处理 dns 相关内容
       const dnsInfos = (this.input_data.dns1 + " " + this.input_data.dns2).trim();
 
-      //如果设置了 dns
-      if (dnsInfos.length > 6) {
-        await window.ipchangServices.setDnsInfo(this.network_selected, dnsInfos);
-      } else {
-        //没有设置 dns 但是设置了网关, 就把网关作为 dns
-        if(this.input_data.router.length > 0) {
-          await window.ipchangServices.setDnsInfo(this.network_selected, this.input_data.router);
+
+      try {
+        if (dnsInfos.length > 6) {
+          await window.ipchangServices.setDnsInfo(this.network_selected, dnsInfos);
         } else {
-          await window.ipchangServices.setDnsInfo(this.network_selected, 'Empty');
+          //没有设置 dns 但是设置了网关, 就把网关作为 dns
+          if (this.input_data.router.length > 0) {
+            await window.ipchangServices.setDnsInfo(this.network_selected, this.input_data.router);
+          } else {
+            await window.ipchangServices.setDnsInfo(this.network_selected, 'Empty');
+          }
         }
-        
+      } catch (error) {
+        console.error("设置 DNS 出错了：" + error);
+        alert("设置 DNS 出错了：" + error);
+        return;
       }
 
-      await window.ipchangServices.setNetworkToManual(this.network_selected, shellInfo);
-      const method = (shellInfo.method === 'setmanualwithdhcprouter' ? 'DHCP手动' : '手动设定');
+      try {
+        //再设置网卡的 IP 地址
+        await window.ipchangServices.setNetworkToManual(this.network_selected, shellInfo);
+        const method = (shellInfo.method === 'setmanualwithdhcprouter' ? 'DHCP手动' : '手动设定');
 
-      this.refresh_right_infos([
-        method, 
-        this.input_data.address,
-        this.input_data.subnetmask,
-        this.input_data.router,
-        this.input_data.dns1,
-        this.input_data.dns2
-      ]);
-
+        this.refresh_right_infos([
+          method,
+          this.input_data.address,
+          this.input_data.subnetmask,
+          this.input_data.router,
+          this.input_data.dns1,
+          this.input_data.dns2
+        ]);
+      } catch (error) {
+        console.error("设置 IP 出错了：" + error);
+        alert("设置 IP 出错了：" + error);
+        return;
+      }
     },
 
 
@@ -266,9 +277,9 @@ const VUEApp = {
 
       if (IPTOOLS.plugin_showing === false || IPTOOLS.task_Interval_running === true || this.network_selected === "") return;
 
-      try {        
+      try {
         IPTOOLS.task_Interval_running = true;
-        const res  = await IPTOOLS.getParseIPandDnsInfo(this.network_selected);
+        const res = await IPTOOLS.getParseIPandDnsInfo(this.network_selected);
         this.refresh_right_infos(res);
       } catch (error) {
         console.error("出错了：" + error);
