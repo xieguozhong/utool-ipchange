@@ -100,12 +100,10 @@ const VUEApp = {
     //获取网卡列表
     async getInterfaceList() {
       const res = await window.ipchangServices.getNetworkNameList();
-      const networkNameList = IPTOOLS.parseNetworkNameList(res);
-      for (const it of networkNameList) {
-        const option = { text: it, value: it };
-        this.network_options.push(option);
+      this.network_options = IPTOOLS.parseNetworkNameList(res);
+      if (this.network_options.length > 0) {
+        this.network_selected = this.network_options[0].value;
       }
-      this.network_selected = this.network_options[0].value;
 
     },
 
@@ -116,9 +114,8 @@ const VUEApp = {
         return;
       }
       try {
-        //先清空前面手动设置的 DNS, 不管有没有手动设置过
-        await window.ipchangServices.setDnsInfo(this.network_selected, 'Empty');
-        //再把网址设置为 DHCP 自动获取模式
+
+        //把网卡设置为 DHCP 自动获取模式
         await window.ipchangServices.setNetworkToDHCP(this.network_selected);
         this.refresh_right_infos([
           'DHCP自动',
@@ -130,8 +127,8 @@ const VUEApp = {
         ]);
 
       } catch (error) {
-        console.error("出错了：" + error);
-        alert("当前网卡已经是 DHCP自动 模式");
+        alert("出错了：" + error);
+        //alert("当前网卡已经是 DHCP自动 模式");
       }
 
     },
@@ -225,27 +222,26 @@ const VUEApp = {
       //先处理 dns 相关内容
       const dnsInfos = (this.input_data.dns1 + " " + this.input_data.dns2).trim();
 
-
-      try {
-        if (dnsInfos.length > 6) {
-          await window.ipchangServices.setDnsInfo(this.network_selected, dnsInfos);
-        } else {
-          //没有设置 dns 但是设置了网关, 就把网关作为 dns
-          if (this.input_data.router.length > 0) {
-            await window.ipchangServices.setDnsInfo(this.network_selected, this.input_data.router);
-          } else {
-            await window.ipchangServices.setDnsInfo(this.network_selected, 'Empty');
-          }
+      let dnsshell = '';
+      //如果写了dns就用dns，没有写dns就用网关
+      let finaDns = dnsInfos || this.input_data.router;
+      if(finaDns.length > 6) {
+        const arraydns = finaDns.split(' ');
+        //设置首选 DNS
+        if (arraydns[0]) {
+          dnsshell = `netsh interface ip set dns name="${this.network_selected}" static ${arraydns[0]} primary`;
         }
-      } catch (error) {
-        console.error("设置 DNS 出错了：" + error);
-        alert("设置 DNS 出错了：" + error);
-        return;
+        //设置备选 DNS
+        if (arraydns[1]) {
+          dnsshell = dnsshell + ` && netsh interface ip add dns name="${this.network_selected}" ${arraydns[1]} index=2`;
+        }
+      } else {
+        dnsshell = `netsh interface ip set dns name="${this.network_selected}" source=dhcp`;
       }
 
       try {
-        //再设置网卡的 IP 地址
-        await window.ipchangServices.setNetworkToManual(this.network_selected, shellInfo);
+        //设置网卡的 IP 地址
+        await window.ipchangServices.setNetworkToManual(dnsshell, this.network_selected, shellInfo);
         const method = (shellInfo.method === 'setmanualwithdhcprouter' ? 'DHCP手动' : '手动设定');
 
         this.refresh_right_infos([
@@ -262,8 +258,6 @@ const VUEApp = {
         return;
       }
     },
-
-
 
     //清空输入框
     clearAllInput() {

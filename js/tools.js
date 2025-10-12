@@ -134,63 +134,66 @@
       for (let i = 0; i < res.length; i++) {
         const arrayNK = res[i].split(/\s{2,}/);
         //只显示已经连接的网卡，对已断开连接的网卡进行设置有很多问题
-        if (arrayNK[1] === "Connected") {
-          networkNameList.push(arrayNK[3]);
+        //20251012 修改为只列出已经启用的网卡，不管网卡是否已连接
+        if (arrayNK[0] === "Enabled") {
+          networkNameList.push({ text: arrayNK[3], value: arrayNK[3] });
         }
       }
       return networkNameList;
     };
 
     //2 Windows 下解析某个网卡信息字符串
-    IPTOOLS.parseNetworkInfos = function (network_name, networkcardInfo) {
+    IPTOOLS.parseNetworkInfos = function (networkcardInfo) {
       const infos = [KONG, KONG, KONG, KONG, KONG, KONG];
-      const arrayNetworkcardInfo = networkcardInfo.replace(/\r/g, "").split('\n');
+      const lines = networkcardInfo.split('\n').map(line => line.trim());
 
-      const starindex = arrayNetworkcardInfo.findIndex(item => typeof item === 'string' && item.includes(`adapter ${network_name}`));
+      // 正则表达式匹配所需字段
+      const dhcpRegex = /DHCP enabled:\s*(Yes|No)/;
+      const ipRegex = /IP Address:\s*([\d.]+)/;
+      const subnetRegex = /Subnet Prefix:.*\(mask ([\d.]+)\)/;
+      const gatewayRegex = /Default Gateway:\s*([\d.]+)/;
+      const dnsDhcpRegex = /DNS servers configured through DHCP:\s*([\d.]+)/;
+      const dnsStaticRegex = /Statically Configured DNS Servers:\s*([\d.]+)/;
 
-      for (let i = starindex + 1, len = arrayNetworkcardInfo.length; i < len; i++) {
-        const it = arrayNetworkcardInfo[i].trim();
+      // 逐行解析
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
 
-        if (it.startsWith("DHCP Enabled")) {
-          infos[0] = it.includes("Yes") ? "DHCP自动" : "手动设定";
+        // 匹配 DHCP 启用状态
+        if (dhcpRegex.test(line)) {
+          infos[0] = line.match(dhcpRegex)[1] === 'Yes' ? 'DHCP自动' : '手动设定';
+          continue;
         }
-        else if (it.startsWith('IPv4 Address')) {
-          infos[1] = it.substring(it.indexOf(':') + 2, it.indexOf('('));
+        // 匹配 IP 地址
+        if (ipRegex.test(line)) {
+          infos[1] = line.match(ipRegex)[1];
+          continue;
         }
-        else if (it.startsWith('Subnet Mask')) {
-          infos[2] = it.substring(it.indexOf(':') + 2);
+        // 匹配子网掩码
+        if (subnetRegex.test(line)) {
+          infos[2] = line.match(subnetRegex)[1];
+          continue;
         }
-        else if (it.startsWith('Default Gateway')) {
-          const gateway = it.substring(it.indexOf(':') + 2);
-          if (gateway && isValidIP(gateway)) {
-            infos[3] = gateway;
-          } else {
-            const nextip = arrayNetworkcardInfo[i + 1]?.trim();
-            if (nextip && isValidIP(nextip)) {
-              infos[3] = nextip;
-            }
+        // 匹配默认网关
+        if (gatewayRegex.test(line)) {
+          infos[3] = line.match(gatewayRegex)[1] || '';
+          continue;
+        }
+        // 匹配 DHCP 配置的 DNS 服务器
+        if (dnsDhcpRegex.test(line)) {
+          infos[4] = line.match(dnsDhcpRegex)[1];
+          if (i + 1 < lines.length && lines[i + 1].match(/^\s*[\d.]+$/)) {
+            infos[5] = lines[i + 1].trim();
           }
+          continue;
         }
-        else if (it.startsWith('DNS Servers')) {
-          const dnsip = it.substring(it.indexOf(':') + 2);
-          if (dnsip && isValidIP(dnsip)) {
-            infos[4] = dnsip;
-            const nextip = arrayNetworkcardInfo[i + 1]?.trim();
-            if (nextip && isValidIP(nextip)) {
-              infos[5] = nextip;
-            }
-          } else {
-            const nextip = arrayNetworkcardInfo[i + 1]?.trim();
-            if (nextip && isValidIP(nextip)) {
-              infos[4] = nextip;
-            }
-            const nextip2 = arrayNetworkcardInfo[i + 2]?.trim();
-            if (nextip2 && isValidIP(nextip2)) {
-              infos[5] = nextip2;
-            }
+        // 匹配静态配置的 DNS 服务器
+        if (dnsStaticRegex.test(line)) {
+          infos[4] = line.match(dnsStaticRegex)[1];
+          // 检查下一行是否还有 DNS 地址（静态 DNS 可能有多行）
+          if (i + 1 < lines.length && lines[i + 1].match(/^\s*[\d.]+$/)) {
+            infos[5] = lines[i + 1].trim();
           }
-
-          break;
         }
       }
       return infos;
@@ -220,8 +223,8 @@
 
     //Windows 下获取网卡的 ip和dns 信息的统一处理过程
     IPTOOLS.getParseIPandDnsInfo = async function (network_name) {
-      const infos = await window.ipchangServices.getNetworkInfo();
-      return IPTOOLS.parseNetworkInfos(network_name, infos);
+      const infos = await window.ipchangServices.getNetworkInfo(network_name);
+      return IPTOOLS.parseNetworkInfos(infos);
     }
 
   }
