@@ -127,7 +127,7 @@ const VUEApp = {
         ]);
 
       } catch (error) {
-        alert("出错了：" + error);
+        alert("出错了，可能的原因： 当前已经是DHCP自动模式");
         //alert("当前网卡已经是 DHCP自动 模式");
       }
 
@@ -254,7 +254,7 @@ const VUEApp = {
         ]);
       } catch (error) {
         console.error("设置 IP 出错了：" + error);
-        alert("设置 IP 出错了：" + error);
+        alert("出错了：\n请检查本机或者网络中已经存在当前ip信息的网卡或设备");
         return;
       }
     },
@@ -276,7 +276,7 @@ const VUEApp = {
         const res = await IPTOOLS.getParseIPandDnsInfo(this.network_selected);
         this.refresh_right_infos(res);
       } catch (error) {
-        console.error("出错了：" + error);
+        console.error("获取网卡信息出错了：" + error);
       } finally {
         IPTOOLS.task_Interval_running = false;
       }
