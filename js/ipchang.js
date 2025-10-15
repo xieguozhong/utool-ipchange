@@ -113,6 +113,7 @@ const VUEApp = {
         alert("请先选择要设置的网卡");
         return;
       }
+
       try {
 
         //把网卡设置为 DHCP 自动获取模式
@@ -127,8 +128,7 @@ const VUEApp = {
         ]);
 
       } catch (error) {
-        alert("出错了，可能的原因： 当前已经是DHCP自动模式");
-        //alert("当前网卡已经是 DHCP自动 模式");
+        alert("出错了，可能的原因： 当前网卡已经是DHCP自动模式");
       }
 
     },
@@ -208,7 +208,6 @@ const VUEApp = {
 
     //应用 按钮按下事件
     async button_application() {
-
       if (this.network_selected === "") {
         alert("请先选择要设置的网卡");
         return;
@@ -217,31 +216,13 @@ const VUEApp = {
       if (!check_address_subnetmask_router(this.input_data)) return;
 
       const shellInfo = IPTOOLS.parseManualShell(this.input_data);
-      if (shellInfo.error) return;
 
-      //先处理 dns 相关内容
-      const dnsInfos = (this.input_data.dns1 + " " + this.input_data.dns2).trim();
-
-      let dnsshell = '';
-      //如果写了dns就用dns，没有写dns就用网关
-      let finaDns = dnsInfos || this.input_data.router;
-      if(finaDns.length > 6) {
-        const arraydns = finaDns.split(' ');
-        //设置首选 DNS
-        if (arraydns[0]) {
-          dnsshell = `netsh interface ip set dns name="${this.network_selected}" static ${arraydns[0]} primary`;
-        }
-        //设置备选 DNS
-        if (arraydns[1]) {
-          dnsshell = dnsshell + ` && netsh interface ip add dns name="${this.network_selected}" ${arraydns[1]} index=2`;
-        }
-      } else {
-        dnsshell = `netsh interface ip set dns name="${this.network_selected}" source=dhcp`;
-      }
+      //先处理 dns 相关内容, 如果写了dns就用dns，没有写dns就用网关
+      const dnsInfos = ((this.input_data.dns1 + " " + this.input_data.dns2).trim()) || this.input_data.router;
 
       try {
-        //设置网卡的 IP 地址
-        await window.ipchangServices.setNetworkToManual(dnsshell, this.network_selected, shellInfo);
+        //设置网卡的 IP 地址，
+        await window.ipchangServices.setNetworkToManual(dnsInfos, this.network_selected, shellInfo);
         const method = (shellInfo.method === 'setmanualwithdhcprouter' ? 'DHCP手动' : '手动设定');
 
         this.refresh_right_infos([
@@ -255,9 +236,9 @@ const VUEApp = {
       } catch (error) {
         console.error("设置 IP 出错了：" + error);
         alert("出错了：\n请检查本机或者网络中已经存在当前ip信息的网卡或设备");
-        return;
       }
     },
+
 
     //清空输入框
     clearAllInput() {

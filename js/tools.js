@@ -10,7 +10,8 @@
           res[i].includes("Ethernet Address") &&
           isValidMacAddress(res[i].substr(res[i].indexOf(":") + 2))
         ) {
-          networkNameList.push(res[i - 2].substr(res[i - 2].indexOf(":") + 2));
+          const cardName = res[i - 2].substr(res[i - 2].indexOf(":") + 2);
+          networkNameList.push({ text: cardName, value: cardName });          
         }
       }
       return networkNameList;
