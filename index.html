@@ -127,17 +127,7 @@
     <script>
         
         const IPTOOLS = {
-            task_Interval_running: false, //更新网卡信息的定时任务是否正在运行，true为正在运行
-            cmd_out_keys:{//保存cmd命令的输出的关键字符，比如：Enabled 和 已启用
-              str_Enabled:'Enabled',
-              // 正则表达式匹配所需字段
-              reg_dhcpRegex : /DHCP enabled:\s*(Yes|No)/,
-              reg_ipRegex : /IP Address:\s*([\d.]+)/,
-              reg_subnetRegex : /Subnet Prefix:.*\(mask ([\d.]+)\)/,
-              reg_gatewayRegex : /Default Gateway:\s*([\d.]+)/,
-              reg_dnsDhcpRegex : /DNS servers configured through DHCP:\s*([\d.]+)/,
-              reg_dnsStaticRegex : /Statically Configured DNS Servers:\s*([\d.]+)/
-            }, 
+            task_Interval_running: false, //更新网卡信息的定时任务是否正在运行，true为正在运行            
             plugin_showing : true //插件是否前台显示中
         };
         const KONG = "空...", DB_NAME = "plan_list_db";

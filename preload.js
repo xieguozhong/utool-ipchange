@@ -110,11 +110,6 @@
       return pubcomm_exec_promise(shell);
     };
 
-    //7 Macos 下设置网卡的 dns 信息
-    window.ipchangServices.setDnsInfo = async (hardwarePortName, dnsInfo) => {
-      const shell = `networksetup -setdnsservers "${hardwarePortName}" ${dnsInfo} && dscacheutil -flushcache`;
-      return pubcomm_exec_promise(shell);
-    };
   }
 
   ////////////////////----Windows下

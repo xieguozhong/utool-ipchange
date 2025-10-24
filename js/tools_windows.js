@@ -2,6 +2,17 @@
 (function () {
   if (utools.isWindows()) {
 
+    IPTOOLS.cmd_out_keys = {//保存cmd命令的输出的关键字符，比如：Enabled 和 已启用
+      str_Enabled: 'Enabled',
+      // 正则表达式匹配所需字段
+      reg_dhcpRegex: /DHCP enabled:\s*(Yes|No)/,
+      reg_ipRegex: /IP Address:\s*([\d.]+)/,
+      reg_subnetRegex: /Subnet Prefix:.*\(mask ([\d.]+)\)/,
+      reg_gatewayRegex: /Default Gateway:\s*([\d.]+)/,
+      reg_dnsDhcpRegex: /DNS servers configured through DHCP:\s*([\d.]+)/,
+      reg_dnsStaticRegex: /Statically Configured DNS Servers:\s*([\d.]+)/
+    };
+
     function setOutKeys(lang) {
       if (lang === 'zh_CN') {
         IPTOOLS.cmd_out_keys.str_Enabled = '已启用';
@@ -21,7 +32,7 @@
       if (result.includes("接口名称")) {
         setOutKeys("zh_CN");
       }
-      
+
       const res = result.replace(/\r/g, "").split("\n");
       const networkNameList = [];
       for (let i = 0; i < res.length; i++) {
