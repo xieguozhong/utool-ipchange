@@ -99,7 +99,9 @@ const VUEApp = {
 
     //获取网卡列表
     async getInterfaceList() {
+
       const res = await window.ipchangServices.getNetworkNameList();
+      
       this.network_options = IPTOOLS.parseNetworkNameList(res);
       if (this.network_options.length > 0) {
         this.network_selected = this.network_options[0].value;

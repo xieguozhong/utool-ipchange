@@ -1,4 +1,3 @@
-
 (function () {
   const { exec } = require("child_process");
 
@@ -27,29 +26,23 @@
     console.log("管理员执行命令：" + stringShell);
     return new Promise((resolve, reject) => {
       try {
-        sudo.exec(
-          stringShell,
-          { name: "utools ipchange" },
-          (error, stdout) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve(stdout);
-            }
+        sudo.exec(stringShell, { name: "utools ipchange" }, (error, stdout) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(stdout);
           }
-        );
+        });
       } catch (err) {
         console.error("管理员执行命令时发生异常：", err);
         reject(err); // 捕获 exec 之外的错误
       }
     });
-  };
+  }
 
   window.ipchangServices = {};
 
-
   if (utools.isMacOS()) {
-
     //1 MacOS 下获取网卡名称列表
     window.ipchangServices.getNetworkNameList = () => {
       const shell = "networksetup -listallhardwareports";
@@ -69,27 +62,38 @@
     };
 
     //4 Macos 下把某个网卡设置为手动
-    window.ipchangServices.setNetworkToManual = (finalDNS, hardwarePortName, shellInfo) => {
-      let dnsshell = '';
-      if(finalDNS.length > 6) {
+    window.ipchangServices.setNetworkToManual = (
+      finalDNS,
+      hardwarePortName,
+      shellInfo,
+    ) => {
+      let dnsshell = "";
+      if (finalDNS.length > 6) {
         dnsshell = `networksetup -setdnsservers "${hardwarePortName}" ${finalDNS} && dscacheutil -flushcache && `;
       } else {
         dnsshell = `networksetup -setdnsservers "${hardwarePortName}" empty && dscacheutil -flushcache && `;
       }
 
       if (shellInfo.method === "setmanual") {
-        const shell = dnsshell + `networksetup -setmanual "${hardwarePortName}" ${shellInfo.addressInfo}`;
+        const shell =
+          dnsshell +
+          `networksetup -setmanual "${hardwarePortName}" ${shellInfo.addressInfo}`;
         return pubcomm_exec_promise(shell);
       }
 
       if (shellInfo.method === "setmanualwithdhcprouter") {
-        const shell = dnsshell + `networksetup -setmanualwithdhcprouter "${hardwarePortName}" ${shellInfo.addressInfo}`;
+        const shell =
+          dnsshell +
+          `networksetup -setmanualwithdhcprouter "${hardwarePortName}" ${shellInfo.addressInfo}`;
         return pubcomm_exec_promise(shell);
       }
 
-      if (shellInfo.method === 'setmanualNorouter') {
+      if (shellInfo.method === "setmanualNorouter") {
         //networksetup -setmanualwithdhcprouter 这一命令为了清空网关项的旧值
-        const shell = dnsshell + `networksetup -setmanualwithdhcprouter "${hardwarePortName}" ${shellInfo.addressInfo.split(' ')[0]}` + ` && networksetup -setmanual "${hardwarePortName}" ${shellInfo.addressInfo}`;
+        const shell =
+          dnsshell +
+          `networksetup -setmanualwithdhcprouter "${hardwarePortName}" ${shellInfo.addressInfo.split(" ")[0]}` +
+          ` && networksetup -setmanual "${hardwarePortName}" ${shellInfo.addressInfo}`;
         return pubcomm_exec_promise(shell);
       }
     };
@@ -106,13 +110,15 @@
       return pubcomm_exec_promise(shell);
     };
 
+    //7 Macos 下设置网卡的 dns 信息
+    window.ipchangServices.setDnsInfo = async (hardwarePortName, dnsInfo) => {
+      const shell = `networksetup -setdnsservers "${hardwarePortName}" ${dnsInfo} && dscacheutil -flushcache`;
+      return pubcomm_exec_promise(shell);
+    };
+  }
 
-  } else if (utools.isWindows()) {
-
-    //设置widnows下当前用户是否为管理员
-    window.ipchangServices.isAdmin = false;
-
-
+  ////////////////////----Windows下
+  if (utools.isWindows()) {
     //1 Windows 下获取网卡名称列表
     window.ipchangServices.getNetworkNameList = () => {
       const shell = "chcp 65001 && netsh interface show interface";
@@ -132,19 +138,24 @@
     };
 
     //4 Windows 下把某个网卡设置为手动ip
-    window.ipchangServices.setNetworkToManual = (finaDns, hardwarePortName, shellInfo) => {
-
-      let dnsshell = '';      
+    window.ipchangServices.setNetworkToManual = (
+      finaDns,
+      hardwarePortName,
+      shellInfo,
+    ) => {
+      let dnsshell = "";
 
       if (finaDns.length > 6) {
-        const arraydns = finaDns.split(' ');
+        const arraydns = finaDns.split(" ");
         //设置首选 DNS
         if (arraydns[0]) {
           dnsshell = `netsh interface ip set dns name="${hardwarePortName}" static ${arraydns[0]} primary`;
         }
         //设置备选 DNS
         if (arraydns[1]) {
-          dnsshell = dnsshell + ` && netsh interface ip add dns name="${hardwarePortName}" ${arraydns[1]} index=2`;
+          dnsshell =
+            dnsshell +
+            ` && netsh interface ip add dns name="${hardwarePortName}" ${arraydns[1]} index=2`;
         }
       } else {
         dnsshell = `netsh interface ip set dns name="${hardwarePortName}" source=dhcp`;
@@ -152,6 +163,5 @@
       const shell = `${dnsshell} && netsh interface ip set address "${hardwarePortName}" static ${shellInfo.addressInfo} && ipconfig /flushdns`;
       return pubcomm_exec_promise_admin(shell);
     };
-
   }
 })();
